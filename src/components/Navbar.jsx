@@ -9,8 +9,7 @@ const NAV_ITEMS = [
   { label: 'Quem Somos', path: '/quem-somos' },
   { label: 'Sustentabilidade', path: '/sustentabilidade' },
   { label: 'Parceiros', path: '/parceiros' },
-  { label: 'Dashboard', path: '/dashboard' },
-  { label: 'Engenharia', path: '/engenharia' },
+  { label: 'ADM', path: '/adm' },
 ]
 
 export default function Navbar() {

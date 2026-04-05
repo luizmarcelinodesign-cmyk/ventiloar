@@ -11,6 +11,7 @@ import Sustentabilidade from './pages/Sustentabilidade'
 import Parceiros from './pages/Parceiros'
 import Dashboard from './pages/Dashboard'
 import Engenharia from './pages/Engenharia'
+import Adm, { AdmGuard } from './pages/Adm'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -33,8 +34,9 @@ export default function App() {
         <Route path="/quem-somos" element={<QuemSomos />} />
         <Route path="/sustentabilidade" element={<Sustentabilidade />} />
         <Route path="/parceiros" element={<Parceiros />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/engenharia" element={<Engenharia />} />
+        <Route path="/adm" element={<Adm />} />
+        <Route path="/dashboard" element={<AdmGuard><Dashboard /></AdmGuard>} />
+        <Route path="/engenharia" element={<AdmGuard><Engenharia /></AdmGuard>} />
       </Routes>
       <Footer />
     </div>
