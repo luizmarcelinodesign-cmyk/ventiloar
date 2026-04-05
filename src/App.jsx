@@ -10,6 +10,7 @@ import QuemSomos from './pages/QuemSomos'
 import Sustentabilidade from './pages/Sustentabilidade'
 import Parceiros from './pages/Parceiros'
 import Dashboard from './pages/Dashboard'
+import Engenharia from './pages/Engenharia'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/sustentabilidade" element={<Sustentabilidade />} />
         <Route path="/parceiros" element={<Parceiros />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/engenharia" element={<Engenharia />} />
       </Routes>
       <Footer />
     </div>
