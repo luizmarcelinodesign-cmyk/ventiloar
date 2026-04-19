@@ -47,11 +47,11 @@ export default function Footer() {
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <span className="material-symbols-outlined text-xs text-primary-container mt-0.5">location_on</span>
-              <p className="text-sm text-on-surface-variant">Madalena, Fortaleza — CE</p>
+              <p className="text-sm text-on-surface-variant">Madalena, Ceará</p>
             </div>
             <div className="flex items-start gap-3">
               <span className="material-symbols-outlined text-xs text-primary-container mt-0.5">mail</span>
-              <p className="text-sm text-on-surface-variant">contato@ventiloar.com.br</p>
+              <p className="text-sm text-on-surface-variant">ventiloar@gmail.com</p>
             </div>
           </div>
         </div>

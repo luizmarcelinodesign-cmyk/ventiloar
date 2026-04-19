@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { TARIFAS_POR_ESTADO, HELICE_OPTIONS, sugerirHelice, calcularSimulacao, calcularOrcamento } from '../utils/calculator'
 import { whatsappLink, whatsappShareLink } from '../utils/whatsapp'
+import { addDocument } from '../services/storageService'
 
 const fmtBRL = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const fmtKWh = (v) => `${Number(v).toFixed(2)} kWh`
@@ -16,15 +17,27 @@ export default function Orcamento() {
     estado: 'Ceará',
     valorKw: '0.77',
     nome: '',
+    email: '',
+    telefone: '',
     tipoEspaco: '',
     endereco: '',
   })
 
   const [simulacao, setSimulacao] = useState(null)
   const [orcamento, setOrcamento] = useState(null)
+  const [leadStatus, setLeadStatus] = useState(null)
+  const [savingLead, setSavingLead] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({})
 
   function handleChange(e) {
     const { name, value } = e.target
+    setFieldErrors((prev) => {
+      if (!prev[name]) return prev
+      const next = { ...prev }
+      delete next[name]
+      return next
+    })
+
     setForm((prev) => {
       const next = { ...prev, [name]: value }
       if (name === 'tamanhoEspaco') {
@@ -39,6 +52,22 @@ export default function Orcamento() {
     })
   }
 
+  function validateLeadFields() {
+    const errors = {}
+
+    if (!form.nome.trim()) errors.nome = 'Informe seu nome.'
+    if (!form.email.trim()) {
+      errors.email = 'Informe seu email.'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errors.email = 'Informe um email válido.'
+    }
+    if (!form.tipoEspaco.trim()) errors.tipoEspaco = 'Informe o tipo de espaço.'
+    if (!form.endereco.trim()) errors.endereco = 'Informe o endereço do local.'
+
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   function handleCalcular(e) {
     e.preventDefault()
     const tamanhoEspaco = parseFloat(form.tamanhoEspaco)
@@ -48,45 +77,87 @@ export default function Orcamento() {
     if (!tamanhoEspaco || !horasUso || !valorKw) return
     setSimulacao(calcularSimulacao(tamanhoEspaco, tamanhoHelice, horasUso, valorKw))
     setOrcamento(null)
+    setLeadStatus(null)
   }
 
-  function handleEnviarWhatsApp() {
+  async function salvarLeadNoBanco(status = 'Novo') {
+    if (!simulacao) return null
+
+    const payload = {
+      clientName: form.nome.trim(),
+      clientEmail: form.email.trim(),
+      clientPhone: form.telefone.trim() || null,
+      totalValue: orcamento?.totalInvestimento || null,
+      status,
+      simulacao: {
+        nome: form.nome,
+        email: form.email,
+        telefone: form.telefone,
+        tipoEspaco: form.tipoEspaco,
+        endereco: form.endereco,
+        estado: form.estado,
+        valorKw: Number(form.valorKw),
+        ...simulacao,
+        orcamento,
+      },
+    }
+
+    setSavingLead(true)
+    try {
+      const created = await addDocument('budgets', payload, 'site_orcamento')
+      return created
+    } catch (err) {
+      console.error('Erro ao salvar lead:', err)
+      return null
+    } finally {
+      setSavingLead(false)
+    }
+  }
+
+  async function handleEnviarWhatsApp() {
     if (!simulacao) return
-    if (!form.nome.trim() || !form.tipoEspaco.trim() || !form.endereco.trim()) {
-      alert('Por favor, preencha todos os campos do formulário de orçamento!')
+    if (!validateLeadFields()) {
       return
     }
+    setLeadStatus(null)
+    await salvarLeadNoBanco('Solicitado')
     const msg = [
-      '🙋 Olá, tenho interesse no sistema Ventiloar e gostaria de um orçamento!',
-      `📝 Nome: ${form.nome}`,
-      `📍 Endereço: ${form.endereco}`,
-      `🏫 Tipo de Espaço: ${form.tipoEspaco}`,
+      'Ola, tenho interesse no sistema Ventiloar e gostaria de um orcamento.',
+      `Nome: ${form.nome}`,
+      `Email: ${form.email}`,
+      form.telefone.trim() ? `Telefone: ${form.telefone}` : null,
+      `Endereco: ${form.endereco}`,
+      `Tipo de Espaco: ${form.tipoEspaco}`,
       '',
-      '📊 Resultados da Simulação:',
-      `📏 Tamanho do Espaço: ${simulacao.tamanhoEspaco} m²`,
-      `🌀 Hélice Escolhida: ${simulacao.tamanhoHelice} cm`,
-      `🌀 Quantidade de Hélices: ${fmtNum(simulacao.quantidadeHelices)}`,
-      `⚙️ Motores em Série: ${fmtNum(simulacao.quantidadeMotoresSerie)}`,
-      `⚙️ Motor (Série): ${simulacao.motor.modelo} (${simulacao.motor.potencia} W)`,
+      'Resultados da Simulacao:',
+      `Tamanho do Espaco: ${simulacao.tamanhoEspaco} m²`,
+      `Helice Escolhida: ${simulacao.tamanhoHelice} cm`,
+      `Quantidade de Helices: ${fmtNum(simulacao.quantidadeHelices)}`,
+      `Motores em Serie: ${fmtNum(simulacao.quantidadeMotoresSerie)}`,
+      `Motor (Serie): ${simulacao.motor.modelo} (${simulacao.motor.potencia} W)`,
       '',
       'COMPARAÇÃO DE CONSUMO',
-      `⚙️ Motores Tradicionais: ${fmtNum(simulacao.quantidadeMotoresTradicionais)}`,
-      `⚡ Série (Mensal): ${fmtKWh(simulacao.consumoMensalSerie)}`,
-      `💵 Custo Série: ${fmtBRL(simulacao.custoMensalSerie)}`,
-      `⚡ Tradicional (Mensal): ${fmtKWh(simulacao.consumoMensalTradicional)}`,
-      `💸 Custo Tradicional: ${fmtBRL(simulacao.custoMensalTradicional)}`,
-      `✅ Economia Estimada: ${fmtBRL(simulacao.economia)}`,
-    ].join('\n')
+      `Motores Tradicionais: ${fmtNum(simulacao.quantidadeMotoresTradicionais)}`,
+      `Serie (Mensal): ${fmtKWh(simulacao.consumoMensalSerie)}`,
+      `Custo Serie: ${fmtBRL(simulacao.custoMensalSerie)}`,
+      `Tradicional (Mensal): ${fmtKWh(simulacao.consumoMensalTradicional)}`,
+      `Custo Tradicional: ${fmtBRL(simulacao.custoMensalTradicional)}`,
+      `Economia Estimada: ${fmtBRL(simulacao.economia)}`,
+    ].filter(Boolean).join('\n')
     window.open(whatsappLink(msg), '_blank')
+    setLeadStatus({ type: 'success', text: 'Solicitação enviada com sucesso. Nossa equipe entrará em contato.' })
   }
 
-  function handleSimularOrcamento() {
+  async function handleSimularOrcamento() {
     if (!simulacao) return
-    if (!form.nome.trim() || !form.tipoEspaco.trim() || !form.endereco.trim()) {
-      alert('Por favor, preencha todos os campos do formulário de orçamento!')
+    if (!validateLeadFields()) {
       return
     }
-    setOrcamento(calcularOrcamento(simulacao))
+    setLeadStatus(null)
+    const novoOrcamento = calcularOrcamento(simulacao)
+    setOrcamento(novoOrcamento)
+    await salvarLeadNoBanco('Simulado')
+    setLeadStatus({ type: 'success', text: 'Orçamento simulado com sucesso.' })
   }
 
   function handleCompartilharOrcamento() {
@@ -96,6 +167,8 @@ export default function Orcamento() {
       '*ORÇAMENTO SIMULADO - SISTEMA VENTILOAR*',
       '',
       `Cliente: ${form.nome}`,
+      `Email: ${form.email}`,
+      form.telefone.trim() ? `Telefone: ${form.telefone}` : null,
       `Local: ${form.tipoEspaco} - ${form.endereco}`,
       '',
       '*Detalhes do Sistema:*',
@@ -117,7 +190,7 @@ export default function Orcamento() {
       '_*Projetação Empreendimentos Ltda*_',
       '_CNPJ: 47.950.352/0001-71_',
       '_Contato: (88) 99476-0657_',
-    ].join('\n')
+    ].filter(Boolean).join('\n')
     window.open(whatsappShareLink(msg), '_blank')
   }
 
@@ -160,7 +233,7 @@ export default function Orcamento() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1">
                   <label className="text-[10px] font-headline font-bold text-on-surface-variant uppercase tracking-widest ml-1">
-                    Tamanho do Espaço (m²)
+                    Tamanho do Espaço (m²) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -195,7 +268,7 @@ export default function Orcamento() {
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-headline font-bold text-on-surface-variant uppercase tracking-widest ml-1">
-                    Horas de Uso por Dia
+                    Horas de Uso por Dia <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -228,7 +301,7 @@ export default function Orcamento() {
 
                 <div className="space-y-1 md:col-span-2">
                   <label className="text-[10px] font-headline font-bold text-on-surface-variant uppercase tracking-widest ml-1">
-                    Valor do kWh (R$)
+                    Valor do kWh (R$) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -268,7 +341,7 @@ export default function Orcamento() {
               <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-1">
                   <label className="text-[10px] font-headline font-bold text-on-surface-variant uppercase tracking-widest ml-1">
-                    Nome Completo
+                    Nome Completo <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -277,13 +350,44 @@ export default function Orcamento() {
                     onChange={handleChange}
                     placeholder="Seu nome completo"
                     required
+                    className={`w-full bg-surface-container border-none focus:ring-0 border-b-2 text-on-surface placeholder:text-outline/50 transition-all py-3 px-4 ${fieldErrors.nome ? 'border-red-500 focus:border-red-500' : 'border-transparent focus:border-primary-container'}`}
+                  />
+                  {fieldErrors.nome && <p className="text-[10px] text-red-500 ml-1">{fieldErrors.nome}</p>}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-headline font-bold text-on-surface-variant uppercase tracking-widest ml-1">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    placeholder="seuemail@exemplo.com"
+                    required
+                    className={`w-full bg-surface-container border-none focus:ring-0 border-b-2 text-on-surface placeholder:text-outline/50 transition-all py-3 px-4 ${fieldErrors.email ? 'border-red-500 focus:border-red-500' : 'border-transparent focus:border-primary-container'}`}
+                  />
+                  {fieldErrors.email && <p className="text-[10px] text-red-500 ml-1">{fieldErrors.email}</p>}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-headline font-bold text-on-surface-variant uppercase tracking-widest ml-1">
+                    Telefone (Opcional)
+                  </label>
+                  <input
+                    type="tel"
+                    name="telefone"
+                    value={form.telefone}
+                    onChange={handleChange}
+                    placeholder="(88) 99999-9999"
                     className="w-full bg-surface-container border-none focus:ring-0 border-b-2 border-transparent focus:border-primary-container text-on-surface placeholder:text-outline/50 transition-all py-3 px-4"
                   />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-headline font-bold text-on-surface-variant uppercase tracking-widest ml-1">
-                    Tipo de Espaço
+                    Tipo de Espaço <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -292,13 +396,14 @@ export default function Orcamento() {
                     onChange={handleChange}
                     placeholder="Onde será instalado? (ex: Galpão, Escola, Igreja...)"
                     required
-                    className="w-full bg-surface-container border-none focus:ring-0 border-b-2 border-transparent focus:border-primary-container text-on-surface placeholder:text-outline/50 transition-all py-3 px-4"
+                    className={`w-full bg-surface-container border-none focus:ring-0 border-b-2 text-on-surface placeholder:text-outline/50 transition-all py-3 px-4 ${fieldErrors.tipoEspaco ? 'border-red-500 focus:border-red-500' : 'border-transparent focus:border-primary-container'}`}
                   />
+                  {fieldErrors.tipoEspaco && <p className="text-[10px] text-red-500 ml-1">{fieldErrors.tipoEspaco}</p>}
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-headline font-bold text-on-surface-variant uppercase tracking-widest ml-1">
-                    Endereço do Local
+                    Endereço do Local <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -307,8 +412,9 @@ export default function Orcamento() {
                     onChange={handleChange}
                     placeholder="Endereço completo"
                     required
-                    className="w-full bg-surface-container border-none focus:ring-0 border-b-2 border-transparent focus:border-primary-container text-on-surface placeholder:text-outline/50 transition-all py-3 px-4"
+                    className={`w-full bg-surface-container border-none focus:ring-0 border-b-2 text-on-surface placeholder:text-outline/50 transition-all py-3 px-4 ${fieldErrors.endereco ? 'border-red-500 focus:border-red-500' : 'border-transparent focus:border-primary-container'}`}
                   />
+                  {fieldErrors.endereco && <p className="text-[10px] text-red-500 ml-1">{fieldErrors.endereco}</p>}
                 </div>
               </div>
             </section>
@@ -318,22 +424,27 @@ export default function Orcamento() {
               <button
                 type="button"
                 onClick={handleEnviarWhatsApp}
-                disabled={!simulacao}
+                disabled={!simulacao || savingLead}
                 className="w-full md:w-auto bg-[#25d366] text-white font-headline font-bold uppercase tracking-[0.15em] text-sm px-10 md:px-12 py-5 text-center flex items-center justify-center gap-4 hover:bg-[#1ebc5b] hover:shadow-[0_0_30px_rgba(37,211,102,0.3)] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined">send</span>
-                Enviar Solicitação
+                {savingLead ? 'Salvando Lead...' : 'Enviar Solicitação'}
               </button>
               <button
                 type="button"
                 onClick={handleSimularOrcamento}
-                disabled={!simulacao}
+                disabled={!simulacao || savingLead}
                 className="w-full md:w-auto bg-tertiary-container text-on-tertiary-container font-headline font-bold uppercase tracking-[0.15em] text-sm px-10 md:px-12 py-5 text-center flex items-center justify-center gap-4 hover:shadow-[0_0_30px_rgba(255,177,79,0.3)] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined">request_quote</span>
-                Simular Orçamento
+                {savingLead ? 'Salvando Lead...' : 'Simular Orçamento'}
               </button>
             </div>
+            {leadStatus && (
+              <div className={`p-3 text-xs ${leadStatus.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {leadStatus.text}
+              </div>
+            )}
             <p className="text-[10px] text-on-surface-variant leading-relaxed">
               "Enviar Solicitação" encaminha seus dados para a equipe Ventiloar via WhatsApp. "Simular Orçamento" gera uma estimativa de valores.
             </p>
