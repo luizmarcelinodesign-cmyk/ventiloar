@@ -12,6 +12,8 @@ const STORES = {
   pricing: 'pricing',
   budgets: 'budgets',
   financialData: 'financial_data',
+  fornecedoras: 'fornecedoras',
+  produtosFornecedoras: 'produtos_fornecedoras',
 }
 
 function generateId() {
@@ -171,6 +173,27 @@ export async function importData(jsonData, userId = 'system') {
   }
 
   await recordAudit('IMPORT_DATA', 'system', null, null, { imported: Object.keys(data) }, userId)
+  return true
+}
+
+export async function seedFornecedoresEProdutos(defaultFornecedores, defaultCabos, userId = 'system') {
+  assertSupabaseConfigured()
+  
+  // 1. Seed fornecedoras
+  const fornecedorasLocais = await listDocuments(STORES.fornecedoras)
+  if (fornecedorasLocais.length === 0) {
+    await replaceCollection(STORES.fornecedoras, defaultFornecedores, userId)
+  }
+  
+  // 2. Seed produtos (cabos)
+  const cabosLocais = await listDocuments(STORES.produtosFornecedoras)
+  if (cabosLocais.length === 0) {
+    const cabosStringIds = defaultCabos.map(c => ({
+      ...c,
+      id: String(c.id)
+    }))
+    await replaceCollection(STORES.produtosFornecedoras, cabosStringIds, userId)
+  }
   return true
 }
 

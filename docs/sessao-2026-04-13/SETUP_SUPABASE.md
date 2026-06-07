@@ -463,3 +463,54 @@ Você agora tem:
 **Status**: ✅ Tutorial Completo  
 **Versão**: 1.0  
 **Data**: 13 de Abril de 2026
+
+---
+
+## 📦 Novas Tabelas: Gestão de Pedidos para Fornecedoras
+
+Adicionadas para suportar a aba de "Pedidos para Fornecedoras" no Painel ADM.
+
+Execute no **SQL Editor** do Supabase:
+
+```sql
+-- Tabela: fornecedoras
+create table fornecedoras (
+  id text primary key,
+  nome text not null,
+  telefone text,
+  whatsapp text,
+  cnpj text,
+  ie text,
+  endereco text,
+  bairro text,
+  cep text,
+  email text,
+  contato text,
+  "createdAt" timestamp default now(),
+  "updatedAt" timestamp default now(),
+  "createdBy" text,
+  "lastModifiedBy" text
+);
+
+create index fornecedoras_updated_at on fornecedoras("updatedAt");
+alter table fornecedoras disable row level security;
+
+-- Tabela: produtos_fornecedoras
+create table produtos_fornecedoras (
+  id text primary key,
+  "fornecedorId" text not null,
+  cod text not null,
+  "desc" text,
+  tam text,
+  preco numeric,
+  "createdAt" timestamp default now(),
+  "updatedAt" timestamp default now(),
+  "createdBy" text,
+  "lastModifiedBy" text
+);
+
+create index produtos_fornecedoras_updated_at on produtos_fornecedoras("updatedAt");
+create index produtos_fornecedoras_fornecedorId on produtos_fornecedoras("fornecedorId");
+alter table produtos_fornecedoras disable row level security;
+```
+

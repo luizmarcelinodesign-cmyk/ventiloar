@@ -6,6 +6,7 @@ import SyncStatus from '../components/SyncStatus'
 import LeadsManager from '../components/LeadsManager'
 import PlantaTecnica from '../components/PlantaTecnica'
 import RelatorioSistema from '../components/RelatorioSistema'
+import PedidosFornecedoras from '../components/PedidosFornecedoras'
 import Dashboard from './Dashboard'
 import Engenharia from './Engenharia'
 
@@ -30,7 +31,7 @@ export default function Adm() {
   const [code, setCode] = useState('')
   const [error, setError] = useState(false)
   const [authenticated, setAuthenticated] = useState(isAdmAuthenticated())
-  const [activeTab, setActiveTab] = useState('overview') // overview, dashboard, engenharia, leads, data, audit, planta
+  const [activeTab, setActiveTab] = useState('overview') // overview, dashboard, engenharia, leads, data, audit, planta, relatorio, pedidos
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -216,6 +217,18 @@ export default function Adm() {
                 <span className="material-symbols-outlined text-base">summarize</span>
                 Relatório
               </button>
+
+              <button
+                onClick={() => setActiveTab('pedidos')}
+                className={`px-4 py-3 flex items-center gap-2 border-b-2 transition-colors font-headline text-sm uppercase tracking-widest ${
+                  activeTab === 'pedidos'
+                    ? 'border-[#ffb964] text-[#ffb964]'
+                    : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-base">local_shipping</span>
+                Pedidos
+              </button>
             </div>
 
             {/* Tab Content */}
@@ -361,6 +374,26 @@ export default function Adm() {
                       <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
                     </div>
                   </div>
+
+                  {/* Pedidos Card */}
+                  <div
+                    onClick={() => setActiveTab('pedidos')}
+                    className="group cursor-pointer bg-surface-container-low p-8 border-l-4 border-tertiary hover:bg-surface-container-high transition-colors"
+                  >
+                    <div className="flex items-center gap-4 mb-4">
+                      <span className="material-symbols-outlined text-tertiary text-3xl">local_shipping</span>
+                      <h3 className="font-headline font-bold uppercase text-lg tracking-widest text-on-surface group-hover:text-tertiary transition-colors">
+                        Pedidos Fornecedoras
+                      </h3>
+                    </div>
+                    <p className="text-sm text-on-surface-variant leading-relaxed mb-6">
+                      Gerencie fornecedoras homologadas, filtre produtos/cabos por fornecedora e gere pedidos de compras profissionais em PDF.
+                    </p>
+                    <div className="flex items-center gap-2 text-tertiary text-xs font-headline font-bold uppercase tracking-widest">
+                      Acessar
+                      <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -372,6 +405,7 @@ export default function Adm() {
             {activeTab === 'audit' && <AuditLog />}
             {activeTab === 'planta' && <PlantaTecnica />}
             {activeTab === 'relatorio' && <RelatorioSistema />}
+            {activeTab === 'pedidos' && <PedidosFornecedoras />}
 
             {/* Logout Button - Always visible */}
             <div className="flex justify-end pt-6 border-t border-outline-variant">

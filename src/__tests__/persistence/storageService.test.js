@@ -73,11 +73,13 @@ describe('storageService - CRUD Completo', () => {
         pricing: 'pricing',
         budgets: 'budgets',
         financialData: 'financial_data',
+        fornecedoras: 'fornecedoras',
+        produtosFornecedoras: 'produtos_fornecedoras',
       })
     })
 
-    it('deve ter exatamente 5 coleções', () => {
-      expect(Object.keys(STORES)).toHaveLength(5)
+    it('deve ter exatamente 7 coleções', () => {
+      expect(Object.keys(STORES)).toHaveLength(7)
     })
   })
 
@@ -516,8 +518,8 @@ describe('storageService - CRUD Completo', () => {
     })
 
     it('deve exportar todas as coleções no formato correto', async () => {
-      // 5 coleções = 5 chamadas from()
-      for (let i = 0; i < 5; i++) {
+      // 7 coleções = 7 chamadas from()
+      for (let i = 0; i < 7; i++) {
         mockSupabase.from.mockReturnValueOnce({
           select: vi.fn().mockReturnThis(),
           order: vi.fn().mockResolvedValue({ data: [{ id: `item_${i}` }], error: null }),
@@ -532,6 +534,8 @@ describe('storageService - CRUD Completo', () => {
       expect(parsed).toHaveProperty('pricing')
       expect(parsed).toHaveProperty('budgets')
       expect(parsed).toHaveProperty('financialData')
+      expect(parsed).toHaveProperty('fornecedoras')
+      expect(parsed).toHaveProperty('produtosFornecedoras')
     })
   })
 
